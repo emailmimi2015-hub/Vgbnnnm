@@ -1,0 +1,874 @@
+Here is your complete, modified Vetements script with the Anti-Underground Immunity feature fully integrated into one single script:
+-- Modified Vetements Script using LinoriaLib with Anti-Underground Immunity
+
+local function fetchSource(relativeUrl)
+	local sources = {
+		"https://raw.githubusercontent.com/deividcomsono/Obsidian/main/" .. relativeUrl,
+		"https://cdn.jsdelivr.net/gh/deividcomsono/Obsidian@main/" .. relativeUrl,
+		"https://raw.githack.com/deividcomsono/Obsidian/main/" .. relativeUrl,
+		"https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/" .. relativeUrl
+	}
+	
+	for _, url in ipairs(sources) do
+		local success, response = pcall(function()
+			return game:HttpGet(url)
+		end)
+		if success and response and #response > 0 and not response:find("404") then
+			local loadSuccess, result = pcall(function()
+				return loadstring(response)()
+			end)
+			if loadSuccess and result then
+				return result
+			end
+		end
+	end
+	return nil
+end
+
+local Library = fetchSource("Library.lua")
+if not Library then
+	warn("[Vetements] Failed to load UI Library across all mirrors. Check executor permissions.")
+	return
+end
+
+local ThemeManager = fetchSource("addons/ThemeManager.lua")
+local SaveManager = fetchSource("addons/SaveManager.lua")
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+-- Mobile-friendly defaults & Styling
+Library.ShowToggleFrameInKeybinds = true
+Library.ShowCustomCursor = false
+Library.NotifySide = "Left"
+
+Library.AccentColor     = Color3.fromRGB(70, 130, 220)
+Library.MainColor       = Color3.fromRGB(18, 18, 20)
+Library.BackgroundColor = Color3.fromRGB(12, 12, 14)
+Library.OutlineColor    = Color3.fromRGB(32, 32, 36)
+Library.FontColor       = Color3.fromRGB(225, 225, 230)
+Library.RiskColor       = Color3.fromRGB(220, 60, 60)
+
+local Window = Library:CreateWindow({
+    Title = 'Vetements',
+    Center = true,
+    AutoShow = true,
+    Resizable = true,
+    ShowCustomCursor = false,
+    UnlockMouseWhileOpen = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2,
+    Size = UDim2.fromOffset(540, 380)
+})
+
+-- ==========================================
+-- Tabs Setup
+-- ==========================================
+local Tabs = {
+    VoidSpam = Window:AddTab('Void Spam'),
+    Teleportation = Window:AddTab('Teleportation'),
+    WeaponMods = Window:AddTab('Weapon Mods'),
+    Kicking = Window:AddTab('Kick'),
+    Underground = Window:AddTab('Underground'),
+    ModDetector = Window:AddTab('Mod Detector'),
+    ['UI Settings'] = Window:AddTab('UI Settings'),
+}
+
+-- ==========================================
+-- Void Spam Setup
+-- ==========================================
+local VoidGroup = Tabs.VoidSpam:AddLeftGroupbox('Void Spam')
+
+VoidGroup:AddToggle('VoidSpamToggle', {
+    Text = 'Void Spam',
+    Default = false,
+    Tooltip = 'Enable Void Spam'
+}):AddKeyPicker('VoidSpamKey', {
+    Default = 'None',
+    Mode = 'Toggle',
+    SyncToggleState = true,
+    Text = 'Void Spam'
+})
+
+VoidGroup:AddDropdown('VoidModeDropdown', {
+    Values = { 'Random', 'Orbit', 'Box', 'Sky', 'Glitch' },
+    Default = 1,
+    Multi = false,
+    Text = 'Void Mode'
+})
+
+VoidGroup:AddSlider('VoidDistanceSlider', {
+    Text = 'Max Distance',
+    Default = 500000000000,
+    Min = 1000000000,
+    Max = 500000000000,
+    Rounding = 0,
+    Compact = false,
+    Suffix = ' studs'
+})
+
+VoidGroup:AddSlider('VoidSpeedSlider', {
+    Text = 'Speed',
+    Default = 0.00000001,
+    Min = 0.00000001,
+    Max = 0.05,
+    Rounding = 8,
+    Compact = false,
+    Suffix = 's'
+})
+
+VoidGroup:AddSlider('UnhittableLayersSlider', {
+    Text = 'Unhittable Desync Layers',
+    Default = 10,
+    Min = 1,
+    Max = 35,
+    Rounding = 0,
+    Compact = false
+})
+
+-- TP Everywhere Group
+local TpEverywhereGroup = Tabs.VoidSpam:AddRightGroupbox('TP Everywhere')
+
+TpEverywhereGroup:AddToggle('TPEverywhereToggle', {
+    Text = 'TP Everywhere',
+    Default = true
+})
+
+TpEverywhereGroup:AddSlider('TPEverywhereCooldownSlider', {
+    Text = 'Cooldown',
+    Default = 0,
+    Min = 0,
+    Max = 1,
+    Rounding = 3,
+    Compact = false,
+    Suffix = 's'
+})
+
+TpEverywhereGroup:AddSlider('TPEverywhereSpeedSlider', {
+    Text = 'Speed / Distance',
+    Default = 700000000000,
+    Min = 1000000000,
+    Max = 700000000000,
+    Rounding = 0,
+    Compact = false,
+    Suffix = ' studs'
+})
+
+-- ==========================================
+-- Teleportation Setup
+-- ==========================================
+local TpGroup = Tabs.Teleportation:AddLeftGroupbox('Nearest Player TP')
+
+TpGroup:AddToggle('NearestTPToggle', {
+    Text = 'Teleport to Nearest',
+    Default = false
+})
+
+TpGroup:AddToggle('TeamCheckToggle', {
+    Text = 'Team Check',
+    Default = true
+})
+
+TpGroup:AddDropdown('TpPositionDropdown', {
+    Values = { 'Torso Back', 'Overhead', 'Under Feet' },
+    Default = 2,
+    Multi = false,
+    Text = 'Position Offset'
+})
+
+TpGroup:AddToggle('MeleeEvasionToggle', {
+    Text = 'Melee Evasion',
+    Default = false
+})
+
+TpGroup:AddSlider('MeleeEvasionSpeedSlider', {
+    Text = 'Spiral Speed',
+    Default = 5,
+    Min = 1,
+    Max = 15,
+    Rounding = 1,
+    Compact = false
+})
+
+-- ==========================================
+-- Weapon Mods Setup
+-- ==========================================
+local WeaponModsGroup = Tabs.WeaponMods:AddLeftGroupbox('Weapon Enhancements')
+
+WeaponModsGroup:AddToggle('NoSpreadToggle', {
+    Text = 'No Spread',
+    Default = false
+})
+
+WeaponModsGroup:AddToggle('RapidFireToggle', {
+    Text = 'Rapid Fire',
+    Default = false
+})
+
+WeaponModsGroup:AddToggle('FastMeleeToggle', {
+    Text = 'Fast Melee',
+    Default = false
+})
+
+-- ==========================================
+-- Kick Setup
+-- ==========================================
+local KickGroup = Tabs.Kicking:AddLeftGroupbox('Kick')
+
+KickGroup:AddToggle('VoidStackKickToggle', {
+    Text = 'Kicking all players',
+    Default = false
+})
+
+-- ==========================================
+-- Underground Setup
+-- ==========================================
+local UndergroundGroup = Tabs.Underground:AddLeftGroupbox('Underground State')
+
+UndergroundGroup:AddToggle('UndergroundToggle', {
+    Text = 'Underground',
+    Default = false
+})
+
+UndergroundGroup:AddSlider('UndergroundDepthSlider', {
+    Text = 'Underground Depth',
+    Default = 6,
+    Min = 1,
+    Max = 50,
+    Rounding = 1,
+    Compact = false,
+    Suffix = ' studs'
+})
+
+-- Anti-Underground Immunity Setup
+local AntiUndergroundGroup = Tabs.Underground:AddRightGroupbox('Anti-Underground')
+
+AntiUndergroundGroup:AddToggle('AntiUndergroundToggle', {
+    Text = 'Anti-Underground Immunity',
+    Default = false,
+    Tooltip = 'Prevents underground players from hitting or interacting with you'
+})
+
+AntiUndergroundGroup:AddSlider('AntiUndergroundLiftSlider', {
+    Text = 'Lift Height',
+    Default = 10,
+    Min = 2,
+    Max = 30,
+    Rounding = 1,
+    Compact = false,
+    Suffix = ' studs'
+})
+
+-- ==========================================
+-- Mod Detector Setup
+-- ==========================================
+local ModGroup = Tabs.ModDetector:AddLeftGroupbox('Mod Detector')
+
+ModGroup:AddToggle('ModDetectorToggle', {
+    Text = 'Mod Detector',
+    Default = false
+})
+
+ModGroup:AddToggle('ModDetectorInstaLeave', {
+    Text = 'Insta-Leave on Detect',
+    Default = false
+})
+
+ModGroup:AddToggle('ModDetectorFriendScan', {
+    Text = 'Scan Player Connections',
+    Default = true
+})
+
+-- ==========================================
+-- Services & Script Backend Engine
+-- ==========================================
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = Players.LocalPlayer
+
+local util = pcall(function() return require(ReplicatedStorage.Modules.Utility) end) and require(ReplicatedStorage.Modules.Utility) or nil
+local enum = pcall(function() return require(ReplicatedStorage.Modules.EnumLibrary) end) and require(ReplicatedStorage.Modules.EnumLibrary) or nil
+local SpectateController = pcall(function() return require(LocalPlayer.PlayerScripts.Controllers:WaitForChild("SpectateController")) end) and require(LocalPlayer.PlayerScripts.Controllers:WaitForChild("SpectateController")) or nil
+
+local lockedY = nil
+local lastPos = nil
+local originalY = nil
+local SPEED_MULTIPLIER = 1.7
+
+local originalPlayerPositions = {}
+local wasKickActive = false
+local flaggedMods = {}
+
+local function isEnemy(player)
+	if player == LocalPlayer then return false end
+	if SpectateController then
+		local duel = SpectateController.CurrentDuelSubject
+		local localDueler = duel and duel:GetDueler(LocalPlayer)
+		local localTeam = localDueler and localDueler:Get("TeamID") or nil
+		
+		if localTeam and duel and duel.Duelers then
+			for _, dueler in ipairs(duel.Duelers) do
+				if dueler.Player == player then
+					local team = dueler:Get("TeamID")
+					return team ~= localTeam
+				end
+			end
+		end
+	end
+	
+	local pTeam = player:GetAttribute("TeamID")
+	local lTeam = LocalPlayer:GetAttribute("TeamID")
+	if pTeam and lTeam then
+		return pTeam ~= lTeam
+	end
+	return true
+end
+
+local function getEvasionOffset(maxDist)
+	local mode = Options.VoidModeDropdown and Options.VoidModeDropdown.Value or "Random"
+	
+	if mode == "Random" then
+		local u = math.random()
+		local v = math.random()
+		local theta = u * 2.0 * math.pi
+		local phi = math.acos(2.0 * v - 1.0)
+		local r = maxDist * (math.random() ^ (1/3))
+		return r * math.sin(phi) * math.cos(theta), r * math.sin(phi) * math.sin(theta), r * math.cos(phi)
+		
+	elseif mode == "Orbit" then
+		local u = math.random()
+		local v = math.random()
+		local theta = u * 2.0 * math.pi
+		local phi = math.acos(2.0 * v - 1.0)
+		return maxDist * math.sin(phi) * math.cos(theta), maxDist * math.sin(phi) * math.sin(theta), maxDist * math.cos(phi)
+		
+	elseif mode == "Box" then
+		return (math.random() * 2 - 1) * maxDist, (math.random() * 2 - 1) * maxDist, (math.random() * 2 - 1) * maxDist
+		
+	elseif mode == "Sky" then
+		local rx = (math.random() * 2 - 1) * maxDist
+		local ry = math.random(maxDist * 0.1, maxDist)
+		local rz = (math.random() * 2 - 1) * maxDist
+		return rx, ry, rz
+		
+	elseif mode == "Glitch" then
+		local signX = math.random(0, 1) == 1 and 1 or -1
+		local signY = math.random(0, 1) == 1 and 1 or -1
+		local signZ = math.random(0, 1) == 1 and 1 or -1
+		return math.random(maxDist * 0.8, maxDist) * signX, math.random(maxDist * 0.8, maxDist) * signY, math.random(maxDist * 0.8, maxDist) * signZ
+	end
+	
+	return (math.random() * 2 - 1) * maxDist, (math.random() * 2 - 1) * maxDist, (math.random() * 2 - 1) * maxDist
+end
+
+local function getNearestPlayer()
+	local nearest = nil
+	local shortestDist = math.huge
+	local char = LocalPlayer.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+	local myPos = char.HumanoidRootPart.Position
+
+	local isTeamCheckActive = Toggles.TeamCheckToggle and Toggles.TeamCheckToggle.Value
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			if isTeamCheckActive and not isEnemy(player) then
+				continue
+			end
+
+			local enemyHrp = player.Character.HumanoidRootPart
+			local dist = (myPos - enemyHrp.Position).Magnitude
+			if dist < shortestDist then
+				shortestDist = dist
+				nearest = player
+			end
+		end
+	end
+	return nearest
+end
+
+local noSpreadPatched = {}
+local originalGunValues = {}
+local originalMeleeValues = {}
+
+local function getEquippedItems()
+	local success, fighterController = pcall(function()
+		return require(LocalPlayer.PlayerScripts.Controllers.FighterController)
+	end)
+	if success and fighterController then
+		local fighter = fighterController:WaitForLocalFighter()
+		if fighter and fighter._equipped_client_items then
+			return fighter._equipped_client_items
+		end
+	end
+	return {}
+end
+
+RunService.Heartbeat:Connect(function(deltaTime)
+	if Toggles.NoSpreadToggle and Toggles.NoSpreadToggle.Value then
+		pcall(function()
+			for item in pairs(getEquippedItems()) do
+				if not noSpreadPatched[item] then
+					noSpreadPatched[item] = true
+					item.IsFullyAiming = function()
+						return true
+					end
+				end
+			end
+		end)
+	else
+		pcall(function()
+			for item in pairs(noSpreadPatched) do
+				pcall(function()
+					item.IsFullyAiming = nil
+				end)
+			end
+			noSpreadPatched = {}
+		end)
+	end
+
+	pcall(function()
+		if game.GameId == 6035872082 then
+			local Storage = ReplicatedStorage
+			local Items = require(Storage.Modules.ItemLibrary).Items
+
+			local rapidActive = Toggles.RapidFireToggle and Toggles.RapidFireToggle.Value
+			local gunExceptions = {
+				["Sniper"] = false,
+				["Crossbow"] = false,
+				["Bow"] = false,
+				["RPG"] = false,
+			}
+			for name, data in pairs(Items) do
+				if typeof(data) == "table" and not gunExceptions[name] then
+					if rapidActive then
+						if not originalGunValues[data] then
+							originalGunValues[data] = {
+								Spread = data.ShootSpread,
+								Accuracy = data.ShootAccuracy,
+								Recoil = data.ShootRecoil,
+								Cooldown = data.ShootCooldown,
+								BurstCooldown = data.ShootBurstCooldown,
+							}
+						end
+						data.ShootSpread = 0
+						data.ShootAccuracy = 0
+						data.ShootRecoil = 0
+						data.ShootCooldown = 0.001
+						data.ShootBurstCooldown = 0.001
+					else
+						if originalGunValues[data] then
+							local orig = originalGunValues[data]
+							data.ShootSpread = orig.Spread
+							data.ShootAccuracy = orig.Accuracy
+							data.ShootRecoil = orig.Recoil
+							data.ShootCooldown = orig.Cooldown
+							data.ShootBurstCooldown = orig.BurstCooldown
+						end
+					end
+				end
+			end
+			if not rapidActive then
+				originalGunValues = {}
+			end
+
+			-- Fast Melee Speed Mod
+			local meleeActive = Toggles.FastMeleeToggle and Toggles.FastMeleeToggle.Value
+			for name, data in pairs(Items) do
+				if typeof(data) == "table" then
+					if meleeActive then
+						if not originalMeleeValues[data] then
+							originalMeleeValues[data] = {
+								Attack = data.AttackCooldown,
+								Swing = data.SwingCooldown,
+								Melee = data.MeleeCooldown,
+								Cooldown = data.Cooldown,
+								Recovery = data.RecoveryTime,
+								Reset = data.ResetTime,
+								Speed = data.SwingSpeed or 1,
+							}
+						end
+						data.AttackCooldown = 0
+						data.SwingCooldown = 0
+						data.MeleeCooldown = 0
+						data.Cooldown = 0
+						data.RecoveryTime = 0
+						data.ResetTime = 0
+						data.SwingSpeed = (originalMeleeValues[data].Speed or 1) * 2
+					else
+						if originalMeleeValues[data] then
+							local orig = originalMeleeValues[data]
+							data.AttackCooldown = orig.Attack
+							data.SwingCooldown = orig.Swing
+							data.MeleeCooldown = orig.Melee
+							data.Cooldown = orig.Cooldown
+							data.RecoveryTime = orig.Recovery
+							data.ResetTime = orig.Reset
+							data.SwingSpeed = orig.Speed
+						end
+					end
+				end
+			end
+			if not meleeActive then
+				originalMeleeValues = {}
+			end
+		end
+	end)
+
+	if Toggles.NearestTPToggle and Toggles.NearestTPToggle.Value then
+		pcall(function()
+			local nearest = getNearestPlayer()
+			if nearest and nearest.Character and nearest.Character:FindFirstChild("HumanoidRootPart") then
+				local enemyHrp = nearest.Character.HumanoidRootPart
+				local character = LocalPlayer.Character
+				if character and character:FindFirstChild("HumanoidRootPart") then
+					local hrp = character.HumanoidRootPart
+					
+					local isEvasionActive = Toggles.MeleeEvasionToggle and Toggles.MeleeEvasionToggle.Value
+					if isEvasionActive then
+						local speedMultiplier = Options.MeleeEvasionSpeedSlider and Options.MeleeEvasionSpeedSlider.Value or 5
+						local t = tick() * speedMultiplier
+						local radius = 3 + math.sin(t * 1.5) * 4.5
+						local angle = t * 4
+						
+						local offsetX = math.cos(angle) * radius
+						local offsetZ = math.sin(angle) * radius
+						local offsetY = math.sin(t * 3) * 2
+						
+						hrp.CFrame = enemyHrp.CFrame * CFrame.new(offsetX, offsetY, offsetZ)
+					else
+						local mode = Options.TpPositionDropdown and Options.TpPositionDropdown.Value or "Torso Back"
+						if mode == "Torso Back" then
+							hrp.CFrame = enemyHrp.CFrame * CFrame.new(0, 0, 3)
+						elseif mode == "Overhead" then
+							hrp.CFrame = enemyHrp.CFrame * CFrame.new(0, 6, 0)
+						elseif mode == "Under Feet" then
+							hrp.CFrame = enemyHrp.CFrame * CFrame.new(0, -5, 0)
+						end
+					end
+				end
+			end
+		end)
+	end
+
+	local isKickActive = Toggles.VoidStackKickToggle and Toggles.VoidStackKickToggle.Value
+	if isKickActive then
+		if not wasKickActive then
+			originalPlayerPositions = {}
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+					originalPlayerPositions[player] = player.Character.HumanoidRootPart.CFrame
+				end
+			end
+			wasKickActive = true
+		end
+
+		pcall(function()
+			local targetVoidPos = CFrame.new(500000, 500000, 500000)
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+					local enemyHrp = player.Character.HumanoidRootPart
+					enemyHrp.CFrame = targetVoidPos
+				end
+			end
+		end)
+	else
+		if wasKickActive then
+			pcall(function()
+				for player, originalCFrame in pairs(originalPlayerPositions) do
+					if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+						player.Character.HumanoidRootPart.CFrame = originalCFrame
+					end
+				end
+			end)
+			originalPlayerPositions = {}
+			wasKickActive = false
+		end
+	end
+
+	if Toggles.UndergroundToggle and Toggles.UndergroundToggle.Value then
+		pcall(function()
+			local character = LocalPlayer.Character
+			if not (character and character.PrimaryPart) then
+				lockedY = nil
+				lastPos = nil
+				originalY = nil
+				return
+			end
+			
+			local root = character:FindFirstChild("HumanoidRootPart")
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			
+			if root and humanoid and humanoid.Health > 0 then
+				humanoid.Health = humanoid.MaxHealth
+				for _, part in ipairs(character:GetChildren()) do
+					if part:IsA("BasePart") then
+						part.CanTouch = false
+						part.AssemblyLinearVelocity = Vector3.zero
+						part.AssemblyAngularVelocity = Vector3.zero
+					end
+				end
+
+				local currentPos = root.Position
+				local depthOffset = -(Options.UndergroundDepthSlider and Options.UndergroundDepthSlider.Value or 6)
+				
+				if not lockedY then
+					if not originalY then originalY = currentPos.Y end
+					lockedY = currentPos.Y + depthOffset
+				else
+					lockedY = (originalY or currentPos.Y) + depthOffset
+				end
+				
+				local moveDir = humanoid.MoveDirection
+				if moveDir.Magnitude > 0 then
+					local baseSpeed = humanoid.WalkSpeed
+					local modifiedSpeed = baseSpeed * SPEED_MULTIPLIER
+					lastPos = currentPos + (moveDir * modifiedSpeed * deltaTime)
+				else
+					if not lastPos then
+						lastPos = currentPos
+					end
+				end
+				
+				local rotationComponent = root.CFrame - currentPos
+				root.CFrame = CFrame.new(lastPos.X, lockedY, lastPos.Z) * rotationComponent
+			else
+				lockedY = nil
+				lastPos = nil
+				originalY = nil
+			end
+		end)
+	else
+		if lockedY then
+			lockedY = nil
+			lastPos = nil
+			originalY = nil
+			pcall(function()
+				local character = LocalPlayer.Character
+				if character then
+					for _, part in ipairs(character:GetChildren()) do
+						if part:IsA("BasePart") then
+							part.CanTouch = true
+						end
+					end
+				end
+			end)
+		end
+	end
+
+	-- Anti-Underground Immunity Logic
+	if Toggles.AntiUndergroundToggle and Toggles.AntiUndergroundToggle.Value then
+		pcall(function()
+			local character = LocalPlayer.Character
+			if not (character and character:FindFirstChild("HumanoidRootPart")) then return end
+			local hrp = character.HumanoidRootPart
+			local myY = hrp.Position.Y
+			
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+					if isEnemy(player) then
+						local enemyHrp = player.Character.HumanoidRootPart
+						local enemyY = enemyHrp.Position.Y
+						
+						if enemyY < (myY - 4) then
+							local liftAmount = Options.AntiUndergroundLiftSlider and Options.AntiUndergroundLiftSlider.Value or 10
+							hrp.CFrame = hrp.CFrame + Vector3.new(0, liftAmount * deltaTime * 10, 0)
+						end
+					end
+				end
+			end
+		end)
+	end
+
+	if Toggles.ModDetectorToggle and Toggles.ModDetectorToggle.Value then
+		pcall(function()
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player ~= LocalPlayer and not flaggedMods[player.UserId] then
+					local isVerifiedStaff = false
+					
+					if player.UserId == game.CreatorId then
+						isVerifiedStaff = true
+					end
+					
+					pcall(function()
+						if game.CreatorType == Enum.CreatorType.Group then
+							if player:GetRankInGroup(game.CreatorId) >= 200 then
+								isVerifiedStaff = true
+							end
+						end
+					end)
+
+					pcall(function()
+						if player:GetAttribute("AdminLevel") and player:GetAttribute("AdminLevel") > 0 then
+							isVerifiedStaff = true
+						elseif player:GetAttribute("IsAdmin") == true then
+							isVerifiedStaff = true
+						end
+					end)
+
+					if isVerifiedStaff then
+						flaggedMods[player.UserId] = true
+						Library:Notify("Mod detected: " .. player.Name, 10)
+						
+						if Toggles.ModDetectorInstaLeave and Toggles.ModDetectorInstaLeave.Value then
+							TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+						end
+					end
+				end
+			end
+		end)
+	end
+end)
+
+task.spawn(function()
+	while true do
+		if Toggles.VoidSpamToggle and Toggles.VoidSpamToggle.Value then
+			pcall(function()
+				local character = LocalPlayer.Character
+				if character and character:FindFirstChild("HumanoidRootPart") then
+					local hrp = character.HumanoidRootPart
+					local maxDist = Options.VoidDistanceSlider and Options.VoidDistanceSlider.Value or 500000000000
+					local layers = Options.UnhittableLayersSlider and Options.UnhittableLayersSlider.Value or 10
+					local isTPEverywhereActive = Toggles.TPEverywhereToggle and Toggles.TPEverywhereToggle.Value
+					
+					local currentDist = isTPEverywhereActive and (Options.TPEverywhereSpeedSlider and Options.TPEverywhereSpeedSlider.Value or 700000000000) or maxDist
+					
+					for i = 1, layers do
+						local rx, ry, rz = getEvasionOffset(currentDist)
+						
+						local desyncVelocity = Vector3.new(
+							math.random(-999999, 999999),
+							math.random(-999999, 999999),
+							math.random(-999999, 999999)
+						)
+						hrp.AssemblyLinearVelocity = desyncVelocity
+						hrp.AssemblyAngularVelocity = desyncVelocity
+						
+						hrp.CFrame = CFrame.new(rx, ry, rz)
+					end
+				end
+			end)
+		end
+		
+		local isTPEverywhereActive = Toggles.TPEverywhereToggle and Toggles.TPEverywhereToggle.Value
+		local speed
+		if isTPEverywhereActive and Options.TPEverywhereCooldownSlider then
+			speed = Options.TPEverywhereCooldownSlider.Value
+		else
+			speed = Options.VoidSpeedSlider and Options.VoidSpeedSlider.Value or 0.00000001
+		end
+		
+		task.wait(speed)
+	end
+end)
+
+-- Watermark Engine Setup
+Library:SetWatermarkVisibility(true)
+
+local FrameTimer = tick()
+local FrameCounter = 0
+local FPS = 60
+
+local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
+    FrameCounter += 1
+
+    if (tick() - FrameTimer) >= 1 then
+        FPS = FrameCounter
+        FrameTimer = tick()
+        FrameCounter = 0
+    end
+
+    local ping = 0
+    pcall(function()
+        ping = math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
+    end)
+
+    Library:SetWatermark(('Vetements | %s fps | %s ms'):format(
+        math.floor(FPS),
+        ping
+    ))
+end)
+
+Library.KeybindFrame.Visible = true
+
+Library:OnUnload(function()
+    WatermarkConnection:Disconnect()
+    print('Unloaded!')
+    Library.Unloaded = true
+end)
+
+-- ==========================================
+-- UI Settings Menu Setup
+-- ==========================================
+local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+
+MenuGroup:AddToggle('KeybindMenuOpen', {
+    Text = 'Show Keybind Menu',
+    Default = Library.KeybindFrame.Visible,
+    Tooltip = 'Toggle the keybind list visibility',
+    Callback = function(Value)
+        Library.KeybindFrame.Visible = Value
+    end
+})
+
+MenuGroup:AddButton('Unload', function()
+    Library:Unload()
+end)
+
+MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', {
+    Default = 'RightControl',
+    NoUI = true,
+    Text = 'Menu keybind'
+})
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+if ThemeManager and SaveManager then
+    ThemeManager:SetLibrary(Library)
+    SaveManager:SetLibrary(Library)
+
+    SaveManager:IgnoreThemeSettings()
+    SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+
+    ThemeManager:SetFolder('VetementsLua')
+    SaveManager:SetFolder('VetementsLua/specific-game')
+
+    SaveManager:BuildConfigSection(Tabs['UI Settings'])
+    ThemeManager:ApplyToTab(Tabs['UI Settings'])
+end
+
+-- Force Color Registries
+Library.AccentColor     = Color3.fromRGB(70, 130, 220)
+Library.MainColor       = Color3.fromRGB(18, 18, 20)
+Library.BackgroundColor = Color3.fromRGB(12, 12, 14)
+Library.OutlineColor    = Color3.fromRGB(32, 32, 36)
+Library.FontColor       = Color3.fromRGB(225, 225, 230)
+
+Library:UpdateColorsUsingRegistry()
+
+-- Force Sharp Square Corners
+local function MakeEverythingSquare(parent)
+    if not parent then return end
+    for _, obj in ipairs(parent:GetDescendants()) do
+        if obj:IsA("UICorner") then
+            obj.CornerRadius = UDim.new(0, 0)
+        end
+    end
+end
+
+task.defer(function()
+    task.wait(0.1)
+    if Library.ScreenGui then
+        MakeEverythingSquare(Library.ScreenGui)
+    end
+    if Library.KeybindFrame then
+        MakeEverythingSquare(Library.KeybindFrame)
+    end
+end)
+
+if SaveManager then
+    SaveManager:LoadAutoloadConfig()
+end
+
